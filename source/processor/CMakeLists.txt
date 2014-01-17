@@ -2,6 +2,21 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_source(processor_factory.cxx)
 
+add_source(prepare_processor.cxx)
+add_source(maxforward_processor.cxx)
+add_source(ugm_seg_processor.cxx)
+add_source(single_combine_processor.cxx)
+add_source(maxforward_combine_processor.cxx)
+add_source(break_processor.cxx)
+
+add_source(crf_seg_processor.cxx)
+add_source(crf_pos_processor.cxx)
+add_source(crf_ner_nr_processor.cxx)
+add_source(crf_ner_ns_processor.cxx)
+add_source(crf_ner_nt_processor.cxx)
+add_source(crf_ner_np_processor.cxx)
+add_source(crf_seg4ner_processor.cxx)
+
 # We'll link utf8 and trie statically into correspoinding processors
 # The reason is that when libbamboo.so or some shared library which is linked
 # with libbamboo.so is open by `dlopen' without RTLD_NOW | RTLD_GLBOAL flag,

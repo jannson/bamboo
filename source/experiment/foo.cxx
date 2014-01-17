@@ -1,28 +1,24 @@
 #include "bamboo.hxx"
 #include <stdio.h>
 
+using namespace bamboo;
+
 int main(int argc, char *argv[])
 {
 	size_t i;
-	struct token_queue *q;
-	if (argc < 2)
-		return 0;
 
-	void *handle = bamboo_init("");
-	size_t n = bamboo_parse_more(handle, &q, argv[1]);
+	ParserFactory* parser_fact = ParserFactory::get_instance();
+	Parser* parser = parser_fact->create("crf_seg", "", true);
+	parser->setopt(BAMBOO_OPTION_TEXT, argv[1]);
 
-	for (i = 0; i < n; i++) {
-		printf("%s\n", q->tokens[i].token);
-	}
+	std::vector<Token*> x;
+	parser->parse(x);
 
-	bamboo_clean(handle);
-
-	std::vector<bamboo::Token> x;
-	bamboo::Parser p("");
-	p.parse(x, argv[1]);
-
-	for (i = 0; i < x.size(); i++) {
-		printf("%s\n", x[i].token);
+	for(int i = 0; i < x.size(); i++)
+	{
+		Token* token = x[i];
+		printf("%s ", token->get_orig_token());
+		delete token;
 	}
 
 }

@@ -32,6 +32,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <vector>
+#include <stdio.h>
 
 #include "parser_factory.hxx"
 #include "custom_parser.hxx"
@@ -101,6 +102,9 @@ static int _do()
 			consume += (tv[1].tv_sec - tv[0].tv_sec) * 1000000 + (tv[1].tv_usec - tv[0].tv_usec);
 
 			for (it = vec.begin(); it < vec.end(); ++it) {
+				if (it != vec.begin()) {
+					std::cout << " ";
+				}
 				unsigned short pos = (*it)->get_pos();
 				std::cout << (*it)->get_orig_token();
 				if (pos) {
@@ -113,7 +117,6 @@ static int _do()
 					if (ch)
 						std::cout << ch;
 				}
-				std::cout << " ";
 				delete *it;
 			}
 			std::cout << std::endl;

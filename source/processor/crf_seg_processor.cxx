@@ -29,6 +29,7 @@
 #include "lexicon_factory.hxx"
 #include "crf_seg_processor.hxx"
 #include "utf8.hxx"
+#include "prepare_processor.hxx"
 #include <cassert>
 #include <cstdio>
 #include <stdexcept>
@@ -74,20 +75,6 @@ CRFSegProcessor::~CRFSegProcessor()
 	delete _tagger;
 }
 
-inline const char *CRFSegProcessor::_get_crf2_tag(int attr) {
-	switch(attr) {
-	case TokenImpl::attr_number:
-	case TokenImpl::attr_alpha:
-		return "ASCII";
-	case TokenImpl::attr_punct:
-		return "PUNC";
-	case TokenImpl::attr_cword:
-		return "CN";
-	default:
-		return "CN";
-	}
-}
-
 void CRFSegProcessor::process(std::vector<TokenImpl *> &in, std::vector<TokenImpl *> &out) {
 	size_t i, offset, size = in.size();
 
@@ -95,7 +82,7 @@ void CRFSegProcessor::process(std::vector<TokenImpl *> &in, std::vector<TokenImp
 	for (i = 0; i < size; ++i) {
 		TokenImpl *cur_tok = in[i];
 		const char *tok_str = cur_tok->get_token();
-		if(cur_tok->get_attr() == TokenImpl::attr_punct) tok_str = cur_tok->get_orig_token();
+		//if(cur_tok->get_attr() == TokenImpl::attr_punct) tok_str = cur_tok->get_orig_token();
 
 		if(cur_tok->get_pos() != 0) {
 			offset = i - _tagger->size();
@@ -107,13 +94,13 @@ void CRFSegProcessor::process(std::vector<TokenImpl *> &in, std::vector<TokenImp
 
 			out.push_back(cur_tok);
 			continue;
-		} else {
-			const char *data[] = {tok_str, _get_crf2_tag(cur_tok->get_attr())};
+		} 
+		bool append = cur_tok->get_attr() != TokenImpl::attr_whitespace;
+		if (append) {
+			const char *data[] = { tok_str, PrepareProcessor::get_crf2_tag(cur_tok) };
 			_tagger->add(2, data);
-		}
-
-		if(*tok_str=='!' || *tok_str=='?' || *tok_str==';' || !strcmp(tok_str, "。")) {
-			offset = i - _tagger->size() + 1;
+		} else {
+			offset = i - _tagger->size();
 			_crf2_tagger(in, offset, out);
 			_tagger->clear();
 		}
@@ -129,25 +116,41 @@ void CRFSegProcessor::_crf2_tagger(std::vector<TokenImpl *> &in, size_t offset, 
 	_result.clear();
 	_result_orig.clear();
 
+	int attr;
 	for (size_t i = 0; i < _tagger->size(); ++i) {
 		TokenImpl *cur_tok = in[offset+i];
 		const char * tag = _tagger->y2(i);
-		if(_output_type==1) {
+		if (_output_type == 1) {
 			cur_tok->set_pos(tag);
 			out.push_back(cur_tok);
 		} else {
+			switch (cur_tok->get_attr()) {
+			case TokenImpl::attr_alpha:
+			case TokenImpl::attr_number:
+			case TokenImpl::attr_punct:
+				tag = "S";
+			}
+			if (*tag == 'S' && _result_orig.size() > 0) {
+				out.push_back(new TokenImpl(_result.c_str(), _result_orig.c_str(), attr));
+				_result.clear();
+				_result_orig.clear();
+			}
 			_result.append(_tagger->x(i, 0));
 			_result_orig.append(cur_tok->get_orig_token());
-			int attr = cur_tok->get_attr();
-			if(attr==TokenImpl::attr_unknow) attr = TokenImpl::attr_cword;
-			if(attr==TokenImpl::attr_alpha || attr==TokenImpl::attr_number || attr==TokenImpl::attr_punct)	tag = "S";
-			if (*tag=='S' || *tag=='E') {
+			attr = cur_tok->get_attr();
+			if (attr == TokenImpl::attr_unknow) {
+				attr = TokenImpl::attr_cword;
+			}
+			if (*tag == 'S' || *tag == 'E') {
 				out.push_back(new TokenImpl(_result.c_str(), _result_orig.c_str(), attr));
 				_result.clear();
 				_result_orig.clear();
 			}
 			delete cur_tok;
 		}
+	}
+	if (_result_orig.size() > 0) {
+		out.push_back(new TokenImpl(_result.c_str(), _result_orig.c_str(), attr));
 	}
 
 #ifdef DEBUG
